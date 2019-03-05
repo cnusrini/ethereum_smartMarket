@@ -26,6 +26,11 @@ For rinkeby - in the repo directory execute the below command to deploy to rinke
     * truffle console --network rinkeby
 # To unit test in ganache:
   * Follow migratin step as above
-  *  
+  * truffle console --network ganache
+  * truffle(ganache)> smartMarket.deployed().then(function(instance){app=instance;})
+  * truffle(ganache)> currenttime = Math.round(new Date()/1000)
+  * truffle(ganache)> app.addProductToStore('iphone 6', 'Cell Phones & Accessories', 'imagelink', 'desclink', currenttime, currenttime + 200, 10, 0)
+  * truffle(ganache)> app.getProduct(1)
+
 # To test the smart contract using truffle test
   * In the project directory, execute truffle test
