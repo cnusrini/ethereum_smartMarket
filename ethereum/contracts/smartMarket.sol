@@ -23,20 +23,40 @@ contract smartMarket {
   uint totalBids;
   ProductAvailability availability;
   ProductCondition condition;
-  mapping (address => mapping (bytes32 => Bid)) bids;
+  //mapping (address => mapping (bytes32 => Bid)) bids;
+  mapping (address => Bid) bids;
+  }
+//product.bids[msg.sender] = Bid(msg.sender,_productId, msg.value,false);
+  struct Bid {
+    address bidder;
+    uint productId;
+    uint value;
+    bool revealed;
+
+}
+
+modifier onlyAfterStart(uint _after) {
+  Product storage product = stores[productIdInStore[_after]][_after];
+  require (now >= product.auctionStartTime);
+  _;
+}
+modifier onlyBeforeEnd(uint _before) {
+      Product storage product = stores[productIdInStore[_before]][_before];
+      require (now <= product.auctionEndTime);
+      _;
   }
 
-  struct Bid {
-  uint productId;
-  uint value;
-  address bidder;
-  bool revealed;
-
+modifier onlyMoreThanStartPrice(uint _lessvalue){
+  Product storage product = stores[productIdInStore[_lessvalue]][_lessvalue];
+  require (msg.value > product.startPrice);
+  _;
 }
 
   constructor() public {
     productIndex = 0;
   }
+
+
 
   function addProductToStore(string memory _name, string memory _category, string memory _imageLink, string memory _descLink, uint _auctionStartTime,
   uint _auctionEndTime, uint _startPrice, uint _productCondition) public {
@@ -66,14 +86,12 @@ function getProduct(uint _productId) view public returns (uint idRet, string mem
 
 }
 
-function bid(uint _productId, bytes32 _bid) payable public returns (bool) {
+function bid(uint _productId) payable public onlyBeforeEnd(_productId) onlyAfterStart(_productId) onlyMoreThanStartPrice(_productId) returns (bool) {
 
   Product storage product = stores[productIdInStore[_productId]][_productId];
-  require (now >= product.auctionStartTime);
-  require (now <= product.auctionEndTime);
-  require (msg.value > product.startPrice);
-  require (product.bids[msg.sender][_bid].value == 0);
-  product.bids[msg.sender][_bid] = Bid(_productId, msg.value, msg.sender, false);
+
+  //  require (product.bids[msg.sender][_bid].value == 0);
+  product.bids[msg.sender] = Bid(msg.sender,_productId, msg.value,false);
 
   product.totalBids += 1;
 
@@ -81,30 +99,40 @@ function bid(uint _productId, bytes32 _bid) payable public returns (bool) {
 
 }
 
-function revealBid(uint _productId, string memory _amount, string memory _secret) public{
 
-  Product storage product = stores[productIdInStore[_productId]][_productId];
-  bytes32 sealedBid = sha256(_amount, _secret);
-  Bid memory bidInfo = product.bids[msg.sender][sealedBid];
+function totalBids(uint _productId) view public returns (uint _totalBidsRet) {
 
-  require (now > product.auctionEndTime);
-  require (bidInfo.bidder > 0);
-  require (bidInfo.revealed == false);
+  Product memory product = stores[productIdInStore[_productId]][_productId];
 
-  uint refund;
-  uint amount = stringToUint(_amount);
+  _totalBidsRet = product.totalBids;
 
-  if(bidInfo.value < amount) {
-  // They didn't send enough amount, they lost
-  refund = bidInfo.value;
- } else {
-  // If first to reveal set as highest bidder
-  if (address(product.highestBidder) == 0) {
-   product.highestBidder = msg.sender;
-   product.highestBid = amount;
-   product.secondHighestBid = product.startPrice;
-   refund = bidInfo.value - amount;
+  return _totalBidsRet;
+
+}
+
+}
+
+
+
+
+
+function revealBid(uint _productId, string memory _amount, string memory _secret) view  public onlyReveal(_productId){
+    Product storage product = stores[productIdInStore[_productId]][_productId];
+    bytes32 sealedBid = keccak256(abi.encodePacked(_amount, _secret));
+    Bid memory bidInfo = product.bids[msg.sender];
+    require (bidInfo.bidder > defaultaccount[0]);
+    require (bidInfo.revealed == false);
+    uint refund;
+    uint amount = stringToUint(_amount);
+    if(bidInfo.value < amount){
+        refund = bidInfo.value;
+    }
+    else{
+        if (address(product.highestBidder) == 0) {
+   product.highestBidder = msg.sender;   product.highestBid = amount;   product.secondHighestBid = product.startPrice;   refund = bidInfo.value - amount;
+
   } else {
+
    if (amount > product.highestBid) {
     product.secondHighestBid = product.highestBid;
     product.highestBidder.transfer(product.highestBid);
@@ -118,38 +146,6 @@ function revealBid(uint _productId, string memory _amount, string memory _secret
     refund = amount;
    }
   }
- }
-  product.bids[msg.sender][sealedBid].revealed = true;
-
-  if (refund > 0) {
-    msg.sender.transfer(refund);
-   }
-
 
 }
-
-function stringToUint(string memory s) pure private returns (uint) {
-
-  bytes memory b = bytes(s);
-  uint result = 0;
-  for (uint i = 0; i < b.length; i++) {
-    if (b[i] >= 48 && b[i] <= 57) {
-      result = result * 10 + (uint(b[i]) - 48);
-    }
-  }
-
-  return result;
-
-}
-
-function totalBids(uint _productId) view public returns (uint _totalBidsRet) {
-
-  Product memory product = stores[productIdInStore[_productId]][_productId];
-
-  _totalBidsRet = product.totalBids;
-
-  return _totalBidsRet;
-
-}
-
 }
