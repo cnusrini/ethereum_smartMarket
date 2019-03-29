@@ -1,4 +1,5 @@
 # This project files are commited to remote repository with the below files/folders ignored :
+/client/node_modules/
 /ethereum/node_modules/
 /ethereum/build/contracts
 package-lock.json/
