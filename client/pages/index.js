@@ -1,22 +1,20 @@
 import React, { Component } from 'react';
 import moment from 'moment'
+import {Button,Form,Input,Label} from 'semantic-ui-react'
+import contractInstance from '../util/smartMarket.json'
+import instanace from '../util/getContract'
 import web3 from '../util/getWeb3';
-import {Button,Card,Container,Divider,Icon,Menu,Segment,Table} from 'semantic-ui-react'
-//import contractInstance1 from '../../ethereum/build/contracts/smartMarket.json';
-import contractInstance1 from '../util/smartMarket.json';
 
 class Products extends Component {
 constructor(props){
     super(props);
     this.state = {
-      web3: null,
-      accounts: null,
-      contract: null,
-      buffer:null,
-      ipfsHash:null,
-      ipfsHash1:null,
-      newdate:'',
-      userName:''
+      name:'',
+      category:'',
+      ipfsImgHash:'',
+      ipfsDescHash:'',
+      price:'',
+      condition:''
     };
 
   }
@@ -29,29 +27,56 @@ static async getInitialProps() {
 
     const accounts = await web3.eth.getAccounts();
 
-
-    return { accounts};
-
-
+    return {accounts};
 }
 
 componentDidMount = async () => {
 
   try {
-    const web3 = await getWeb3();// Use web3 to get the user's accounts.
+    //const web3 = await getWeb3();// Use web3 to get the user's accounts.
     const accounts = await web3.eth.getAccounts();
     const networkId = await web3.eth.net.getId();
-    const deployedNetwork = contractInstance1.networks[networkId];
-    const smartMarketInstance = new web3.eth.Contract(contractInstance1.abi, deployedNetwork.address, );
-    console.log('smartMarketInstance',smartMarketInstance);
+    const deployedNetwork = contractInstance.networks[networkId];
+    const smartMarketInstance = new web3.eth.Contract(contractInstance.abi, deployedNetwork.address, );
+
+    console.log('loaded componentDidMount',smartMarketInstance);
 
   } catch (e) {
-    console.log(error);
+    console.log(e.message);
   }
-
-
-
 };
+
+handleChange = async (event) => {
+  event.preventDefault();
+
+  this.setState({ [event.target.name]: event.target.value });
+
+  console.log('in nameonChange' + this.state.name);
+  console.log('in categoryOnChange'+ this.state.category);
+};
+
+handleSubmit = async (event) => {
+  event.preventDefault();
+  console.log('in onsubmit');
+  try {
+
+    let tx = await instanace.methods.addProductToStore(
+            this.state.name,
+            this.state.category,
+            this.state.ipfsImgHash,
+            this.state.ipfsDescHash,
+            this.state.price,
+            this.state.condition).send({
+            from: '0x3467992f9f050268902386ba5000b77C761FE7B9'
+          });
+          console.log('tx data', tx);
+          console.log('contractInstance in submit',contractInstance);
+
+  } catch (e) {
+    console.log('error in handleSubmit method:'+ e.message);
+
+  }
+}
 
 
 //Below is the page render method. Render page is divided into 4 segment.
@@ -60,11 +85,58 @@ componentDidMount = async () => {
 //Third segment : Displays all the snaps that are uploaded fromBlock 0 to latest block. With the ipfshash , date and time and the person who has uploaded.
 //Fourth segment : Displays all the snaps for an individual address. Third and fourth segment will be an onLoad()
 render(){
+console.log('accounts',contractInstance);
+console.log('new ins',instanace);
 
   return(
 
           <div className='digital-identity'>
-            <p>index class</p>
+            <p>Add Product</p>
+            <Form onSubmit={this.handleSubmit}>
+             <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.1/semantic.min.css"></link>
+             <Input name='name' icon='truck' iconPosition='left' placeholder='name of the product'
+             type='text' value={this.state.name} onChange={this.handleChange}
+             />
+             <Form.Field inline>
+               <Label pointing='right'>Category</Label>
+               <input name='category' type='password' placeholder='Category'
+               type='text' value={this.state.category} onChange={this.handleChange}
+
+               />
+             </Form.Field>
+             <Form.Field inline>
+               <Label pointing='right'>Image</Label>
+               <input name='ipfsImgHash' type='password' placeholder='Image'
+               type='text' value={this.state.ipfsImgHash} onChange={this.handleChange}
+
+               />
+             </Form.Field>
+             <Form.Field inline>
+               <Label pointing='right'>Desc</Label>
+               <input name='ipfsDescHash' type='password' placeholder='Desc'
+               type='text' value={this.state.ipfsDescHash} onChange={this.handleChange}
+
+               />
+             </Form.Field>
+             <Form.Field inline>
+               <Label pointing='right'>Price</Label>
+               <input name='price`' type='password' placeholder='price'
+               type='text' value={this.state.price} onChange={this.handleChange}
+
+               />
+             </Form.Field>
+             <Form.Field inline>
+               <Label pointing='right'>Condition</Label>
+               <input name='condition' type='password' placeholder='Condition'
+               type='text' value={this.state.condition} onChange={this.handleChange}
+
+               />
+             </Form.Field>
+             <Button color='blue' fluid-size='large' >submit</Button>
+
+         </Form>
+
+
           </div>
 
 
